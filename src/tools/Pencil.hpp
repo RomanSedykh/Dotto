@@ -34,6 +34,11 @@ public:
     bool wasInit = false;
     S32 prevPlotX = 0, prevPlotY = 0;
     U32 which;
+    Preview preview {.hideCursor = true};
+
+    Preview* getPreview() override {
+        return &preview;
+    }
 
     void invalidateMetaMenu() override {
         Tool::invalidateMetaMenu();
@@ -250,17 +255,14 @@ public:
 
     virtual void initPaint() {
         paint = inject<Command>{"paint"};
-        if (which == 1) {
-            paint->load({
-                    {"selection", selection},
-                    {"preview", true}
-                });
-        } else {
-            paint->load({
-                    {"selection", selection},
-                    {"mode", "erase"},
-                    {"preview", true}
-                });
+        paint->load({
+                {"selection", selection},
+                {"preview", true}
+            });
+        if (which == 0) {
+            paint->set("cursor", true);
+        } else if (which == 2) {
+            paint->set("mode", "erase");
         }
     }
 
@@ -295,9 +297,11 @@ public:
     void end(Surface* surface, const Vector<Point2D>& points) override {
         if (!shape)
             return;
+
         paint->load({{"preview", false}});
         paint->run();
-        if (surface && smoothing > 0 && points.size() > 2) {
+
+        if (which > 0 && surface && smoothing > 0 && points.size() > 2) {
             paint->undo();
             applySmoothing(surface, points);
         }

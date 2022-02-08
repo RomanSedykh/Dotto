@@ -5,6 +5,7 @@
 #include <cmd/Command.hpp>
 #include <common/Messages.hpp>
 #include <common/PubSub.hpp>
+#include <common/System.hpp>
 #include <doc/Cell.hpp>
 #include <gui/Controller.hpp>
 #include <gui/Events.hpp>
@@ -22,8 +23,13 @@ public:
         node()->addEventListener<ui::MouseMove,
                                  ui::MouseDown,
                                  ui::MouseUp,
-                                 ui::MouseWheel>(this);
+                                 ui::MouseWheel,
+                                 ui::MouseLeave>(this);
         setup();
+    }
+
+    void on(msg::ActivateTool&) {
+        end();
     }
 
     void on(msg::ModifyCell& event) {
@@ -47,7 +53,6 @@ public:
     }
 
     void eventHandler(const ui::MouseDown& event) {
-        end();
         paint(event.targetX(), event.targetY(), event.buttons);
     }
 
@@ -55,12 +60,21 @@ public:
         end();
     }
 
+    void eventHandler(const ui::MouseLeave&) {
+        system->setMouseCursorVisible(true);
+        end();
+    }
+
+    inject<System> system;
+    U32 prevButtons = ~U32{};
+
     void eventHandler(const ui::MouseMove& event) {
-        if (event.buttons) {
-            paint(event.targetX(), event.targetY(), event.buttons);
-        } else {
-            end();
-        }
+        paint(event.targetX(), event.targetY(), event.buttons);
+
+        Tool::Preview* preview = nullptr;
+        if (activeTool)
+            preview = activeTool->getPreview();
+        system->setMouseCursorVisible(!preview || !preview->hideCursor);
     }
 
     void eventHandler(const ui::MouseWheel& event) {
@@ -70,6 +84,7 @@ public:
     }
 
     void end() {
+        prevButtons = ~U32{};
         if (points.empty())
             return;
         if (activeTool)
@@ -78,6 +93,10 @@ public:
     }
 
     void paint(S32 tx, S32 ty, U32 buttons) {
+        if (prevButtons != buttons)
+            end();
+
+        prevButtons = buttons;
         auto rect = node()->globalRect;
         if (!rect.width || !rect.height)
             return;
@@ -86,7 +105,8 @@ public:
         S32 x = (tx * surface->width()) / rect.width;
         S32 y = (ty * surface->height()) / rect.height;
         bool begin = points.empty();
-
+        if (!begin && x == points.back().x && y == points.back().y)
+            return;
         points.push_back({x, y});
 
         if (begin) {

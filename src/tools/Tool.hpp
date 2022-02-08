@@ -20,6 +20,13 @@ public:
     static inline std::weak_ptr<Tool> active;
     static inline Color color;
 
+    struct Preview {
+        bool hideCursor = false;
+        std::shared_ptr<Surface> surface;
+        Color multiply;
+        F32 x, y;
+    };
+
     static void boot() {
         for (auto& entry : Tool::getAllWithoutFlag("noauto")) {
             entry.second->init(entry.first);
@@ -37,6 +44,8 @@ public:
                 {"meta", getMetaProperties()}
             });
     }
+
+    virtual Preview* getPreview() {return nullptr;}
 
     virtual void onActivate() {
         set("meta", getMetaProperties());

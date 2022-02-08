@@ -5,11 +5,12 @@
 #pragma once
 
 #include <common/inject.hpp>
-#include <gui/Window.hpp>
 
-class System : public Injectable<System> {
+namespace ui {
+    class Node;
+}
+
+class TextTransform : public Injectable<TextTransform>, public std::enable_shared_from_this<TextTransform> {
 public:
-    virtual void setMouseCursorVisible(bool) = 0;
-    virtual bool boot() = 0;
-    virtual bool run() = 0;
+    virtual String run(const String& input, const ui::Node*) = 0;
 };
